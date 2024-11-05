@@ -7,7 +7,7 @@ connection = sqlite3.connect('database.db')
 
 
 
-# Initializing table for student tasks
+# Initializing table for students
 with open('students.sql') as f:
     connection.executescript(f.read())
 
