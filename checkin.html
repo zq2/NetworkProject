@@ -1,0 +1,39 @@
+<!-- HTML for Check-In Page -->
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Tool</title>
+</head>
+
+<body>
+
+    <h1>Class Check-In</h1>
+    
+    <form method="post">
+        
+            {% for student in students %}
+                <label>
+                    <input type="checkbox" name="students" value="{{ student['id'] }}">
+                    {{ student['firstName'] }} {{ student['lastName']}}
+                </label>
+                <br>
+            {% endfor %}
+        <br>
+        
+        <button type="submit">Check In</button>
+
+        <a href="{{url_for('attendanceList')}}" class="btn btn-link">Check Attendance</a>
+    </form>
+
+    {% for message in get_flashed_messages() %}
+        {% if message %}
+                {{ message }}
+        {% endif %}
+    {% endfor %}
+
+</body>
+
+</html>

@@ -1,0 +1,53 @@
+<!-- HTML for Attendance Page -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Records</title>
+    <style>
+        /* adds a line between each student's record */
+        .checkin-timestamps
+        {
+            margin-bottom: 10px;
+        }
+        .separator 
+        {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Attendance Records</h1>
+
+    <table>
+        <tr>
+            <th>Student Name</th>
+            <th>Check-in Dates</th>
+        </tr>
+
+        {% for student in attendanceList %}
+        <tr>
+            <td>{{ student.name }}</td>
+            <td>
+                {% if student.checkins %}
+                    <div class="checkin-timestamps">
+                        {{ student.checkins | join('<br>') | safe }}
+                    </div>
+                    <div class="separator"><hr></div>
+                {% else %}
+                    <div class="no-checkin">
+                        No Check-Ins
+                    </div>
+                    <div class="separator"><hr></div>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+</body>
+</html>
