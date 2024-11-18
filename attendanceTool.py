@@ -8,9 +8,120 @@
 from flask import Flask, render_template, request, redirect, flash
 from datetime import datetime
 import sqlite3
+import ipaddress # For IP address manipulation
+import random  # For testing
+import requests  # For sending HTTP requests
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'SeCrEtKeY'
+
+lockedIPs = [] # List of Ip's used to check in a student. Must be reset after each class period
+
+
+
+
+class Authentication:
+    def __init__(self, correct_network_base='76.72.201.0/24'): # Creed's home network - would need to be changed to school network
+        # Initialize the AttendanceSystem with the correct network base
+        self.correct_network = ipaddress.ip_network(correct_network_base, strict=False)
+        self.test_mode = False
+        self.test_ip = None
+
+    def get_current_ip(self):
+        """Get current external IP address."""
+        if self.test_mode and self.test_ip:
+            # Return the test IP if test mode is enabled
+            return self.test_ip
+        
+        try:
+            # List of services to get the external IP address
+            ip_services = [
+                'https://api.ipify.org',
+                'https://ip.seeip.org',
+                'https://ifconfig.me'
+            ]
+            
+            for service in ip_services:
+                # Try to get the IP address from each service
+                response = requests.get(service, timeout=5)
+                if response.status_code == 200:
+                    return response.text.strip()
+            
+            # Raise an exception if no service could provide the IP
+            raise Exception("Could not retrieve external IP")
+        
+        except requests.RequestException:
+            # Handle network errors
+            print("Network error retrieving external IP")
+            return None
+
+    def validate_ip(self):
+        """Check if current external IP is in school network subnet."""
+        current_ip = self.get_current_ip()
+        
+        try:
+            # Convert the current IP to an ip_address object
+            ip_obj = ipaddress.ip_address(current_ip)
+            # Check if the IP is in the correct network
+            is_valid = ip_obj in self.correct_network
+            print(f"Current IP: {current_ip}")
+            print(f"Network Check: {is_valid}")
+            return is_valid
+        except ValueError:
+            # Handle invalid IP address
+            return False
+        
+    # Function to check for multiple check-in attempts from same IP
+    def check_locked(self):
+        current_ip = self.get_current_ip()
+
+        if current_ip in lockedIPs:
+            return True
+        else:
+            return False
+
+    # Authentication Function
+    # This function simulates auth code verification
+    # Arbitrary 6-digit code is generated and compared to user input
+    def send_authentication_push(self):
+        """Simulate Duo push or authentication method."""
+        print("Sending authentication request...")
+        auth_code = str(random.randint(100000, 999999))
+        print(f"Authentication code generated: {auth_code}")
+        return auth_code
+
+    # Check if the user input matches the generated code
+    def verify_authentication(self, sent_code):
+        """Verify authentication code."""
+        user_input = input("Enter authentication code: ")
+        return user_input == sent_code
+
+    # Main Attendance Marking Function
+    # This function combines the IP validation, authentication, and attendance marking
+    def mark_attendance(self):
+        """Main attendance marking workflow."""
+        # IP Network Validation
+        if not self.validate_ip():
+            print("Error: Not on school network. Cannot mark attendance.")
+            print(f"Current IP: {self.get_current_ip()}")
+            return False
+        if self.check_locked():
+            print(f"Multiple student check-in attempt from {self.get_current_ip()}")
+            return False
+        else:
+            lockedIPs.append(self.get_current_ip()) # Lock IP to prevent checking in multiple students
+            return True
+
+        # Authentication Push
+        #auth_code = self.send_authentication_push()
+
+        # Code Verification
+        #if self.verify_authentication(auth_code):
+        #    print("Attendance marked successfully!")
+        #    return True
+        #else:
+        #    print("Authentication failed. Attendance not marked.")
+        #    return False
 
 
 
@@ -27,29 +138,36 @@ def get_db_connection():
 # Check-in
 @app.route('/', methods=('GET', 'POST'))
 def checkIn():
-    conn = get_db_connection() # connect to database
-    students = conn.execute('SELECT id, firstName, lastName FROM students').fetchall() # get all student info
+    auth_system = Authentication()
+    conn = get_db_connection() # Connect to database
+    students = conn.execute('SELECT id, firstName, lastName FROM students').fetchall() # Get all student info
     conn.close()
 
     if request.method == 'POST':
-        selectedStudents = request.form.getlist('students')  # get selected student
-        timestamp = datetime.now()  # current timestamp
+        selectedStudents = request.form.getlist('students')  # Get selected student
+        timestamp = datetime.now()  # Current timestamp
+        formattedTime = timestamp.strftime("%B %d, %Y - %I:%M:%S %p") # Formatting timestamp
 
 
-        # add timestamp to attendance table
-        if selectedStudents:
+        # Add timestamp to attendance table
+        if selectedStudents and len(selectedStudents) == 1: # One student selected
             try:
                 conn = get_db_connection()
                 for student_id in selectedStudents:
-                    conn.execute('INSERT INTO attendance (id, checkInTime) VALUES (?, ?)', (student_id, timestamp))
+                    if auth_system.mark_attendance():
+                        conn.execute('INSERT INTO attendance (id, checkInTime) VALUES (?, ?)', (student_id, formattedTime))
+                        flash('Check-in successful!')
+                    else:
+                        flash(('An error occurred while checking in.'))
                 conn.commit()
                 conn.close()
 
-                flash('Check-in successful!')
             except Exception:
                 flash('An error occurred while checking in.')
-        else:
-            flash('Please select a student to check in.')
+        elif len(selectedStudents) > 1: # Multiple students selected
+            flash('Must select only one student.')
+        else: # No students selected
+            flash('Select a student to check in')
 
 
         return redirect('/')
@@ -58,24 +176,25 @@ def checkIn():
 
 
 
+
 # Attendance
 @app.route('/attendanceList', methods=('GET', 'POST'))
 def attendanceList():
     conn = get_db_connection()
-    students = conn.execute('SELECT id, firstName, lastName FROM students').fetchall() # get student info from student table in db
-    attendanceRecords = conn.execute('SELECT id, checkInTime FROM attendance').fetchall() # get timestamp info from attendance table in db
+    students = conn.execute('SELECT id, firstName, lastName FROM students').fetchall() # Get student info from student table in database
+    attendanceRecords = conn.execute('SELECT id, checkInTime FROM attendance').fetchall() # Get timestamp info from attendance table in database
     conn.close()
 
-    # dictionary to track check-ins
+    # Dictionary to track check-ins
     attendanceDict = {student['id']: {'name': f"{student['firstName']} {student['lastName']}", 'checkins': []} for student in students}
 
-    # add check-in times to dict
+    # Add check-in times to dict
     for record in attendanceRecords:
         student_id = record['id']
         if student_id in attendanceDict:
             attendanceDict[student_id]['checkins'].append(record['checkInTime'])
 
-    # create list for rendering
+    # Create list for rendering
     attendanceList = []
     for data in attendanceDict.values():
         attendanceList.append({
