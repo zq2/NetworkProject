@@ -28,4 +28,32 @@
     - Mark attendance based on student's device being connected to the university's network. Eduroam allows universities to authenticate users based on their network credentials.
     - **Limitations:**
         - Students could still share credentials with other students. (I think)
-    
+
+### Our Solution: Attendance Web App
+
+- The team first created a simple web app using the Flask micro web framework for Python
+- In theory, students should check their name only, click ‘Check In’, and a timestamp for that class period will be recorded in the database
+- Teachers can then see each student’s check-ins on the Attendance Record page
+
+### Verifying Check-ins:
+- The team created functions to verify the student is on the correct network by hardcoding the chosen network subnet and comparing that against the network the student is currently on
+- In production, the hardcoded network would need to be updated to the correct network subnet for the school
+
+### Authentication:
+- In a production environment, something like 2-factor authentication would be used to log check-ins and prevent checking in multiple students from the same device during the same class period
+- During development, the team created a rudimentary 2-factor authentication service to display a randomly generated code and have the user input the code in the terminal
+- To keep the web app realistic, the team chose to log the IPs of the students when they check in, and prevent multiple check-ins from the same IP, opposed to requiring the user to type in the terminal
+- In production, any log preventing multiple check-ins would need to be reset before a new class period
+
+### Preventing Multiple Check-ins:
+- The team disabled the ability to choose multiple students at the same time when checking in
+- Any attempt to check in multiple students from the same device is prevented. This also flags the attempt and displays the IP address in the terminal
+- An attempt to check in multiple students also displays an error message for the user
+
+### Lessons Learned:
+
+
+### Conclusion:
+
+
+### Proposed Questions:
