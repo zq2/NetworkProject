@@ -51,9 +51,18 @@
 - An attempt to check in multiple students also displays an error message for the user
 
 ### Lessons Learned:
-
+- Students can use tools like VPNs to circumvent network-based location checks
+- Additional verification mechanisms, like GPS, OTPs, or biometric checks, are needed to improve security
+- Adding these features increases development time and costs
+- The app may perform differently depending on the network environment, such as the type of Wi-Fi or network configuration used by the school
 
 ### Conclusion:
-
+- The team’s attendance tool offers a practical solution for tracking student attendance with features like network verification and authentication methods
+- Adding additional features, like GPS or biometric checks, are impractical for this project due to the associated costs
+- Using an existing product may offer a more efficient and cost-effective solution for attendance tracking compared to custom-built systems
 
 ### Proposed Questions:
+1. Compare biometric and GPS verification methods in ensuring accurate attendance. Which would be more effective and why?
+2. What are the limitations of using network and location-based verification methods for attendance tracking?
+3. How can an attendance system prevent students from checking in multiple times on the same device?
+
